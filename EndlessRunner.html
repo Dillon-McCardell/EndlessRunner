@@ -291,35 +291,31 @@
         }
 
         function pushPlayer(player, obstacle) {
-            let collision = true;
-            while (collision) {
-                // Get the bounding rectangles of the player and obstacle
-                const playerRect = player.getBoundingClientRect();
-                const obstacleRect = obstacle.getBoundingClientRect();
+            // Get the bounding rectangles of the player and obstacle
+            const playerRect = player.getBoundingClientRect();
+            const obstacleRect = obstacle.getBoundingClientRect();
 
-                collision = !(playerRect.bottom < obstacleRect.top ||
-                    playerRect.top > obstacleRect.bottom ||
-                    playerRect.right < obstacleRect.left ||
-                    playerRect.left > obstacleRect.right);
+            // Calculate the player's position and speed
+            const playerRight = playerRect.right;
+            const playerLeft = playerRect.left;
+            const playerBottom = playerRect.bottom;
 
-                // Calculate the player's position and speed
-                const playerRight = playerRect.right;
-                const playerBottom = playerRect.bottom;
+            // Calculate the obstacle's position and speed
+            const obstacleLeft = obstacleRect.left;
+            const obstacleRight = obstacleRect.right;
 
-                // Calculate the obstacle's position and speed
-                const obstacleLeft = obstacleRect.left;
-
-                // Check if the player is on top of the obstacle
-                if (playerBottom > obstacleRect.top) {
-                    player.style.bottom = obstacleRect.top;
-                    // Adopt the obstacle's x-axis speed and movement
-                    player.style.left = (playerRight + (obstacleLeft - playerRight)) + 'px';
-                }
-                // Check if the player is to the left of the obstacle
-                else if (playerRight <= obstacleLeft + 10) {
-                    // Adopt the obstacle's x-axis speed and movement
-                    player.style.left = (playerRight + (obstacleLeft - playerRight)) + 'px';
-                }
+            // Check if the player is on top of the obstacle
+            if (playerBottom > obstacleRect.top) {
+                console.log(player.style.bottom);
+                player.style.bottom = obstacleRect.top;
+                console.log(player.style.bottom);
+                // Adopt the obstacle's x-axis speed and movement
+                player.style.left = obstacleLeft - 60 + 'px';
+            }
+            // Check if the player is to the left of the obstacle
+            else if (playerRight <= obstacleLeft) {
+                // Adopt the obstacle's x-axis speed and movement
+                player.style.left = obstacleLeft - 60 + 'px';
             }
         }
 
