@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        #game-container {
+            position: relative;
+            width: 600px;
+            height: 300px;
+            border: 2px solid #000;
+            overflow: hidden;
+        }
+
+        #player {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #f00;
+            transition: bottom 0.5s;
+            display: none;
+            /* Initially Hide the player object */
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #00f;
+            bottom: 0;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #000;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #f00;
+            display: none;
+            white-space: nowrap;
+        }
+
+        #try-again-button {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: tan;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            display: none;
+            z-index: 1;
+        }
+
+        #high-scores {
+            position: absolute;
+            top: 120px;
+            right: -120px;
+            font-size: 20px;
+        }
+
+        #start-button {
+            position: absolute;
+            top: 260px;
+            left: 310px;
+            transform: translate(-50%, -50%);
+            background-color: tan;
+            color: #fff;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 2;
+            /* Add this property to set the button in front */
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Endless Runner Game</h1>
+    <p>Press spacebar to jump</p>
+    <button id="start-button">Start</button>
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="score">0</div>
+        <div id="game-over">GAME OVER</div>
+        <button id="try-again-button">Press Space to Try Again</button>
+    </div>
+    <div id="high-scores">
+        <h2>High Scores</h2>
+        <ol id="score-list">
+            <li></li>
+            <li></li>
+            <li></li>
+        </ol>
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const gameContainer = document.getElementById('game-container');
+        const startButton = document.getElementById('start-button');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverMessage = document.getElementById('game-over');
+        const tryAgainButton = document.getElementById('try-again-button');
+        const highScoresList = document.getElementById('score-list');
+        let highScores = [{ name: "", score: 0 }, { name: "", score: 0 }, { name: "", score: 0 }];
+
+        let playerJumping = false;
+        let gameStarted = false;
+        let gameRunning = false;
+        let score = 0;
+        let playerX = 0;
+        let isMovingLeft = false;
+        let isMovingRight = false;
+
+        document.addEventListener('keydown', (event) => {
+            if (gameRunning) {
+                if (event.key === 'ArrowLeft') {
+                    isMovingLeft = true;
+                    event.preventDefault(); // Prevent default arrow action (scrolling)
+                } else if (event.key === 'ArrowRight') {
+                    isMovingRight = true;
+                    event.preventDefault(); // Prevent default arrow action (scrolling)
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (event) => {
+            if (event.key === 'ArrowLeft') {
+                isMovingLeft = false;
+            } else if (event.key === 'ArrowRight') {
+                isMovingRight = false;
+            }
+        });
+
+        function updatePlayerPosition() {
+            if (isMovingLeft && playerX > 0) {
+                playerX -= 5;
+            }
+            if (isMovingRight && playerX < gameContainer.offsetWidth - player.offsetWidth) {
+                playerX += 5;
+            }
+            player.style.left = playerX + 'px';
+        }
+
+        function resetPlayerPosition() {
+            playerX = 0;
+            player.style.left = playerX + 'px';
+        }
+
+        function jump() {
+            if (playerJumping) return;
+            playerJumping = true;
+            player.style.bottom = '150px';
+            setTimeout(() => {
+                player.style.bottom = '0';
+                playerJumping = false;
+            }, 500);
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (gameRunning && event.keyCode === 32) {
+                jump();
+                event.preventDefault(); // Prevent default spacebar action (scrolling)
+            }
+        });
+
+        startButton.addEventListener('click', () => {
+            gameStarted = true;
+            startButton.style.display = 'none';
+            player.style.bottom = '0';
+            player.style.display = 'block';
+            startGameLoop();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (gameOverMessage.style.display === 'block' && event.keyCode === 32) {
+                tryAgainButton.click();
+                event.preventDefault(); // Prevent default spacebar action (scrolling)
+            }
+        });
+
+        tryAgainButton.addEventListener('click', () => {
+            if (!gameRunning) {
+                gameOverMessage.style.display = 'none';
+                tryAgainButton.style.display = 'none';
+                score = 0;
+                scoreDisplay.textContent = score;
+                player.style.bottom = '0';
+
+                const obstacles = document.querySelectorAll('.obstacle');
+                obstacles.forEach((obstacle) => {
+                    obstacle.remove();
+                });
+
+                resetPlayerPosition();
+                isMovingLeft = false;
+                isMovingRight = false;
+
+                gameStarted = true;
+                startGameLoop();
+            }
+        });
+
+        const gameSpeed = 2;
+        let obstacleInterval = 2000;
+        let animationFrameId;
+
+        function startGameLoop() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+
+            resetPlayerPosition();
+            gameRunning = true;
+            tryAgainButton.style.display = 'none';
+
+            function generateObstacle(width, height) {
+                const obstacle = document.createElement('div');
+                obstacle.className = 'obstacle';
+                obstacle.style.width = width + 'px';
+                obstacle.style.height = height + 'px';
+                obstacle.style.left = 700 + 'px';
+                gameContainer.appendChild(obstacle);
+            }
+
+            function gameLoop() {
+                if (gameStarted) {
+                    updatePlayerPosition();
+                    const obstacles = document.querySelectorAll('.obstacle');
+
+                    obstacles.forEach((obstacle) => {
+                        const obstacleLeft = parseFloat(obstacle.style.left);
+                        obstacle.style.left = obstacleLeft - gameSpeed + 'px';
+
+                        if (checkCollision(player, obstacle)) {
+                            pushPlayer(player, obstacle);
+                        }
+
+                        if (obstacleLeft < -50) {
+                            obstacle.remove();
+                        }
+                    });
+
+                    if (score < 1000) {
+                        if (Math.random() < 0.005) {
+                            generateObstacle(50, 20);
+                        }
+                    } else {
+                        if (Math.random() < 0.015) {
+                            const obstacleWidth = 50 + Math.min(score / 100, 50);
+                            const obstacleHeight = 20 + Math.min(score / 100, 20);
+                            generateObstacle(obstacleWidth, obstacleHeight);
+                        }
+                    }
+
+                    score++;
+                    scoreDisplay.textContent = score;
+                    animationFrameId = requestAnimationFrame(gameLoop);
+
+                    if (player.getBoundingClientRect().right < 0) {
+                        gameOver();
+                    }
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function checkCollision(player, obstacle) {
+            const playerRect = player.getBoundingClientRect();
+            const obstacleRect = obstacle.getBoundingClientRect();
+            return !(
+                playerRect.bottom < obstacleRect.top ||
+                playerRect.top > obstacleRect.bottom ||
+                playerRect.right < obstacleRect.left ||
+                playerRect.left > obstacleRect.right
+            );
+        }
+
+        function pushPlayer(player, obstacle) {
+            let collision = true;
+            while (collision) {
+                // Get the bounding rectangles of the player and obstacle
+                const playerRect = player.getBoundingClientRect();
+                const obstacleRect = obstacle.getBoundingClientRect();
+
+                collision = !(playerRect.bottom < obstacleRect.top ||
+                    playerRect.top > obstacleRect.bottom ||
+                    playerRect.right < obstacleRect.left ||
+                    playerRect.left > obstacleRect.right);
+
+                // Calculate the player's position and speed
+                const playerRight = playerRect.right;
+                const playerBottom = playerRect.bottom;
+
+                // Calculate the obstacle's position and speed
+                const obstacleLeft = obstacleRect.left;
+
+                // Check if the player is on top of the obstacle
+                if (playerBottom > obstacleRect.top) {
+                    player.style.bottom = obstacleRect.top;
+                    // Adopt the obstacle's x-axis speed and movement
+                    player.style.left = (playerRight + (obstacleLeft - playerRight)) + 'px';
+                }
+                // Check if the player is to the left of the obstacle
+                else if (playerRight <= obstacleLeft + 10) {
+                    // Adopt the obstacle's x-axis speed and movement
+                    player.style.left = (playerRight + (obstacleLeft - playerRight)) + 'px';
+                }
+            }
+        }
+
+
+
+        function gameOver() {
+            gameStarted = false;
+            gameRunning = false;
+            gameOverMessage.style.display = 'block';
+            tryAgainButton.style.display = 'block';
+            checkHighScore(score);
+        }
+
+        function checkHighScore(playerScore) {
+            for (let i = 0; i < highScores.length; i++) {
+                if (playerScore > highScores[i].score) {
+                    const playerName = prompt(`Congratulations! You achieved a high score. Please enter your name:`);
+                    if (playerName) {
+                        highScores.splice(i, 0, { name: playerName, score: playerScore });
+                        highScores.pop();
+                        updateHighScoreList();
+                        break;
+                    }
+                    break;
+                }
+            }
+        }
+
+        function updateHighScoreList() {
+            if (highScores.length >= 2) {
+                highScores.sort((a, b) => b.score - a.score);
+            }
+
+            highScoresList.innerHTML = '';
+            highScores.forEach((score, index) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${score.name}: ${score.score}`;
+                highScoresList.appendChild(listItem);
+            });
+        }
+    </script>
+</body>
+
+</html>
