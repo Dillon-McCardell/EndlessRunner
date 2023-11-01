@@ -117,13 +117,16 @@
         const highScoresList = document.getElementById('score-list');
         let highScores = [{ name: "", score: 0 }, { name: "", score: 0 }, { name: "", score: 0 }];
 
-        let playerJumping = false;
         let gameStarted = false;
         let gameRunning = false;
         let score = 0;
         let playerX = 0;
         let isMovingLeft = false;
         let isMovingRight = false;
+        let grounded = true;
+        let targetHeight = 0;
+        let jumping = false;
+        let blocking = false;
 
         document.addEventListener('keydown', (event) => {
             if (gameRunning) {
@@ -160,15 +163,42 @@
             player.style.left = playerX + 'px';
         }
 
-        function jump() {
-            if (playerJumping) return;
-            playerJumping = true;
-            player.style.bottom = '150px';
-            setTimeout(() => {
-                player.style.bottom = '0';
-                playerJumping = false;
-            }, 500);
+        async function gravity() {
+            // Check if player is jumping
+            if (((targetHeight == parseFloat(player.style.bottom) && jumping == true) || jumping == false) && !blocking) {
+                console.log("gravity Engaged");
+                jumping = false;
+                // Check for collisions
+                let collision = checkCollision(player);
+                if (!collision) {
+                    // Move the player object downward
+                    const currentBottom = parseFloat(player.style.bottom);
+                    const gravitySpeed = 5; // Adjust as needed
+                    player.style.bottom = currentBottom - gravitySpeed + 'px';
+                }
+                else {
+                    setTimeout(() => {
+                        grounded = true;
+                    }, 600);
+                }
+            }
+
+            // Pause briefly to control the gravity speed
+            //await new Promise(resolve => setTimeout(resolve, 10)); // Adjust the duration as needed
         }
+
+        function jump() {
+            if (!grounded) return;
+            grounded = false;
+            blocking = true;
+            player.style.bottom = parseFloat(player.style.bottom) + 150 + "px";
+            targetHeight = parseFloat(player.style.bottom);
+            jumping = true;
+            setTimeout(() => {
+                blocking = false;
+            }, 600);
+        }
+
 
         document.addEventListener('keydown', (event) => {
             if (gameRunning && event.keyCode === 32) {
@@ -217,8 +247,8 @@
         const gameSpeed = 2;
         let obstacleInterval = 2000;
         let animationFrameId;
-
         function startGameLoop() {
+
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
             }
@@ -238,6 +268,7 @@
 
             function gameLoop() {
                 if (gameStarted) {
+                    gravity();
                     updatePlayerPosition();
                     const obstacles = document.querySelectorAll('.obstacle');
 
@@ -245,9 +276,6 @@
                         const obstacleLeft = parseFloat(obstacle.style.left);
                         obstacle.style.left = obstacleLeft - gameSpeed + 'px';
 
-                        if (checkCollision(player, obstacle)) {
-                            pushPlayer(player, obstacle);
-                        }
 
                         if (obstacleLeft < -50) {
                             obstacle.remove();
@@ -279,16 +307,32 @@
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
-        function checkCollision(player, obstacle) {
+        function checkCollision(player) {
             const playerRect = player.getBoundingClientRect();
-            const obstacleRect = obstacle.getBoundingClientRect();
-            return !(
-                playerRect.bottom < obstacleRect.top ||
-                playerRect.top > obstacleRect.bottom ||
-                playerRect.right < obstacleRect.left ||
-                playerRect.left > obstacleRect.right
-            );
+            const playerBottom = playerRect.bottom;
+            const playerRight = playerRect.right;
+            let obstacleCollision = false;
+
+            const bottomCollision = parseFloat(player.style.bottom) <= 0;
+            const obstacles = document.querySelectorAll('.obstacle');
+            if (obstacles.entries > 0) {
+                obstacles.forEach((obstacle) => {
+                    const obstacleRect = obstacle.getBoundingClientRect();
+                    obstacleCollision = !(
+                        playerBottom < obstacleRect.top ||
+                        playerRect.top > obstacleRect.bottom ||
+                        playerRight < obstacleRect.left ||
+                        playerRect.left > obstacleRect.right
+                    );
+                    if (obstacleCollision === true) {
+                        pushPlayer(player, obstacle);
+                        return true;
+                    }
+                });
+            }
+            return bottomCollision;
         }
+
 
         function pushPlayer(player, obstacle) {
             // Get the bounding rectangles of the player and obstacle
