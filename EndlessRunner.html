@@ -127,6 +127,7 @@
         let targetHeight = 0;
         let jumping = false;
         let blocking = false;
+        let jumpRequested = false;
 
         document.addEventListener('keydown', (event) => {
             if (gameRunning) {
@@ -163,11 +164,10 @@
             player.style.left = playerX + 'px';
         }
 
-        async function gravity() {
+        function gravity() {
             // Check if player is jumping
             if (((targetHeight == parseFloat(player.style.bottom) && jumping == true) || jumping == false) && !blocking) {
-                console.log("gravity Engaged");
-                jumping = false;
+                
                 // Check for collisions
                 let collision = checkCollision(player);
                 if (!collision) {
@@ -178,7 +178,9 @@
                 }
                 else {
                     setTimeout(() => {
+                        console.log("Grounded")
                         grounded = true;
+                        jumping = false;
                     }, 600);
                 }
             }
@@ -189,11 +191,21 @@
 
         function jump() {
             if (!grounded) return;
+            const jumpSpeed = 5;
+            let collision = checkCollision(player)
+            if (!collision && parseFloat(player.style.bottom) < targetHeight){
+                jumping = true;
+                const currentBottom = parseFloat(player.style.bottom);
+                player.style.bottom = currentBottom + jumpSpeed + 'px';
+            }
+            else {
+                jumpRequested = false;
+                jumping = false;
+            }
+            jumping = true;
             grounded = false;
             blocking = true;
-            player.style.bottom = parseFloat(player.style.bottom) + 150 + "px";
             targetHeight = parseFloat(player.style.bottom);
-            jumping = true;
             setTimeout(() => {
                 blocking = false;
             }, 600);
@@ -202,7 +214,9 @@
 
         document.addEventListener('keydown', (event) => {
             if (gameRunning && event.keyCode === 32) {
-                jump();
+                if(!jumping){
+                    jumpRequested = true;
+                }
                 event.preventDefault(); // Prevent default spacebar action (scrolling)
             }
         });
@@ -268,6 +282,7 @@
 
             function gameLoop() {
                 if (gameStarted) {
+                    if(jumpRequested) jump();
                     gravity();
                     updatePlayerPosition();
                     const obstacles = document.querySelectorAll('.obstacle');
