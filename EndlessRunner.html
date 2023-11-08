@@ -167,9 +167,9 @@
         function gravity() {
             // Check if player is jumping
             if (((targetHeight == parseFloat(player.style.bottom) && jumping == true) || jumping == false) && !blocking) {
-                
+
                 // Check for collisions
-                let collision = checkCollision(player);
+                let collision = checkAllCollisions(player);
                 if (!collision) {
                     // Move the player object downward
                     const currentBottom = parseFloat(player.style.bottom);
@@ -177,11 +177,9 @@
                     player.style.bottom = currentBottom - gravitySpeed + 'px';
                 }
                 else {
-                    setTimeout(() => {
-                        console.log("Grounded")
-                        grounded = true;
-                        jumping = false;
-                    }, 600);
+                    console.log("Grounded")
+                    grounded = true;
+                    jumping = false;
                 }
             }
 
@@ -191,31 +189,29 @@
 
         function jump() {
             if (!grounded) return;
+            const currentBottom = parseFloat(player.style.bottom);
             const jumpSpeed = 5;
-            let collision = checkCollision(player)
-            if (!collision && parseFloat(player.style.bottom) < targetHeight){
+            let collision = checkObstacleCollision(player)
+            if (!collision && parseFloat(player.style.bottom) < targetHeight) {
                 jumping = true;
-                const currentBottom = parseFloat(player.style.bottom);
+                grounded = false;
                 player.style.bottom = currentBottom + jumpSpeed + 'px';
             }
             else {
+                console.log("jump encountered a collision");
                 jumpRequested = false;
                 jumping = false;
-            }
-            jumping = true;
-            grounded = false;
-            blocking = true;
-            targetHeight = parseFloat(player.style.bottom);
-            setTimeout(() => {
                 blocking = false;
-            }, 600);
+            }
         }
 
 
         document.addEventListener('keydown', (event) => {
             if (gameRunning && event.keyCode === 32) {
-                if(!jumping){
+                if (!jumping) {
+                    targetHeight = parseFloat(player.style.bottom) + 400;
                     jumpRequested = true;
+                    blocking = true;
                 }
                 event.preventDefault(); // Prevent default spacebar action (scrolling)
             }
@@ -282,7 +278,7 @@
 
             function gameLoop() {
                 if (gameStarted) {
-                    if(jumpRequested) jump();
+                    if (jumpRequested) jump();
                     gravity();
                     updatePlayerPosition();
                     const obstacles = document.querySelectorAll('.obstacle');
@@ -322,7 +318,7 @@
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
-        function checkCollision(player) {
+        function checkAllCollisions(player) {
             const playerRect = player.getBoundingClientRect();
             const playerBottom = playerRect.bottom;
             const playerRight = playerRect.right;
@@ -346,6 +342,30 @@
                 });
             }
             return bottomCollision;
+        }
+
+        function checkGroundCollision(player) {
+            return parseFloat(player.style.bottom) <= 0;
+        }
+
+        function checkObstacleCollision(player) {
+            const obstacles = document.querySelectorAll('.obstacle');
+            if (obstacles.entries > 0) {
+                obstacles.forEach((obstacle) => {
+                    const obstacleRect = obstacle.getBoundingClientRect();
+                    obstacleCollision = !(
+                        playerBottom < obstacleRect.top ||
+                        playerRect.top > obstacleRect.bottom ||
+                        playerRight < obstacleRect.left ||
+                        playerRect.left > obstacleRect.right
+                    );
+                    if (obstacleCollision === true) {
+                        pushPlayer(player, obstacle);
+                        return true;
+                    }
+                });
+            }
+            return false;
         }
 
 
